@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>杉达-数据结构课程设计 - BYOW - Build Your Own World</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #1e3c72;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .control-panel {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input[type="number"], input[type="text"] {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            width: 120px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #2a5298;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #1e3c72;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        .world-container {
+            position: relative;
+            border: 3px solid #1e3c72;
+            border-radius: 10px;
+            overflow: hidden;
+            /* 背景棋盘格纹理 */
+            background-image: 
+                linear-gradient(45deg, #2a2a2a 25%, transparent 25%),
+                linear-gradient(-45deg, #2a2a2a 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #2a2a2a 75%),
+                linear-gradient(-45deg, transparent 75%, #2a2a2a 75%);
+            background-size: 8px 8px;
+            background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+            background-color: #ffb3d1;  /* 浅粉色作为基础色 */
+            margin-bottom: 20px;
+        }
+        
+        #worldCanvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        
+        .info-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .info-box h3 {
+            color: #1e3c72;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        
+        .info-box p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #333;
+            border-radius: 3px;
+        }
+        
+        /* HUD样式 */
+        .hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .hud-item {
+            margin: 5px 0;
+        }
+        
+        .hud-label {
+            color: #90EE90;
+            font-weight: bold;
+        }
+        
+        #worldCanvas {
+            background: transparent;  /* Canvas背景透明，显示容器背景纹理 */
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>杉达-数据结构课程设计 - 🌍 BYOW - Build Your Own World</h1>
+        
+        <div id="status" class="status info" style="display: none;"></div>
+        
+        <div class="control-panel">
+            <div class="control-group">
+                <label>种子 (Seed):</label>
+                <input type="number" id="seedInput" placeholder="随机">
+            </div>
+            <div class="control-group">
+                <label>宽度:</label>
+                <input type="number" id="widthInput" value="80" min="20" max="100">
+            </div>
+            <div class="control-group">
+                <label>高度:</label>
+                <input type="number" id="heightInput" value="50" min="20" max="100">
+            </div>
+            <button onclick="generateWorld()">生成世界</button>
+            <button onclick="loadWorld()">重新加载</button>
+            <button onclick="saveGame()">保存游戏</button>
+            <button onclick="loadGame()">加载游戏</button>
+        </div>
+        
+        <div class="world-container">
+            <canvas id="worldCanvas"></canvas>
+            <div class="hud" id="hud">
+                <div class="hud-item">
+                    <span class="hud-label">Tile:</span> <span id="tileInfo">-</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">Position:</span> <span id="playerPos">-</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">Seed:</span> <span id="currentSeed">-</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <div class="info-box">
+                <h3>世界信息</h3>
+                <p id="worldInfo">等待生成世界...</p>
+            </div>
+            <div class="info-box">
+                <h3>房间统计</h3>
+                <p id="roomStats">-</p>
+            </div>
+            <div class="info-box">
+                <h3>走廊统计</h3>
+                <p id="corridorStats">-</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8082';
+        let currentWorld = null;
+        let canvas = null;
+        let ctx = null;
+        const TILE_SIZE = 6;  // 每个瓦片的像素大小（稍微大一点，确保'#'和点清晰可见）
+        
+        // 玩家状态
+        let playerX = -1;
+        let playerY = -1;
+        let inputSequence = '';  // 记录输入序列，用于确定性
+        let isGameStarted = false;
+
+        // 瓦片颜色映射（更像地牢风格）
+        const TILE_COLORS = {
+            0: '#000000',  // FLOOR (房间地板) - 黑色
+            1: '#404040',  // WALL (墙壁) - 深灰色（带纹理效果）
+            2: '#000000',  // ROOM (房间) - 黑色地板
+            3: '#000000'   // CORRIDOR (走廊) - 黑色地板
+        };
+
+        // 初始化
+        window.onload = function() {
+            canvas = document.getElementById('worldCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // 设置鼠标事件
+            setupMouseEvents();
+            
+            // 设置键盘事件
+            setupKeyboardEvents();
+            
+            // 尝试加载现有世界
+            loadWorld();
+        };
+        
+        // 设置鼠标事件
+        function setupMouseEvents() {
+            canvas.addEventListener('mousemove', function(e) {
+                if (!currentWorld) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) / TILE_SIZE);
+                const y = Math.floor((e.clientY - rect.top) / TILE_SIZE);
+                
+                if (x >= 0 && x < currentWorld.width && y >= 0 && y < currentWorld.height) {
+                    const tile = currentWorld.map[y][x];
+                    let tileName = 'Unknown';
+                    
+                    if (tile === 1) {
+                        tileName = 'Wall';
+                    } else if (tile === 2) {
+                        tileName = 'Room';
+                    } else if (tile === 3) {
+                        tileName = 'Corridor';
+                    } else {
+                        tileName = 'Empty';
+                    }
+                    
+                    document.getElementById('tileInfo').textContent = tileName;
+                }
+            });
+            
+            canvas.addEventListener('mouseleave', function() {
+                document.getElementById('tileInfo').textContent = '-';
+            });
+        }
+        
+        // 设置键盘事件
+        function setupKeyboardEvents() {
+            document.addEventListener('keydown', function(e) {
+                // 如果按S键，开始游戏
+                if (e.key.toLowerCase() === 's' && !isGameStarted && currentWorld) {
+                    startGame();
+                    return;
+                }
+                
+                // 游戏开始后，处理WASD移动
+                if (isGameStarted && currentWorld) {
+                    const key = e.key.toLowerCase();
+                    if (key === 'w' || key === 'a' || key === 's' || key === 'd') {
+                        e.preventDefault();
+                        movePlayer(key);
+                    }
+                }
+            });
+        }
+        
+        // 开始游戏
+        function startGame() {
+            if (!currentWorld) return;
+            
+            // 找到第一个可通行位置（房间或走廊）
+            let found = false;
+            for (let y = 0; y < currentWorld.height && !found; y++) {
+                for (let x = 0; x < currentWorld.width && !found; x++) {
+                    const tile = currentWorld.map[y][x];
+                    if (tile === 2 || tile === 3) {  // 房间或走廊
+                        playerX = x;
+                        playerY = y;
+                        found = true;
+                    }
+                }
+            }
+            
+            if (found) {
+                isGameStarted = true;
+                inputSequence = '';
+                document.getElementById('playerPos').textContent = `(${playerX}, ${playerY})`;
+                showStatus('游戏开始！使用WASD键移动', 'success');
+                renderWorld(currentWorld);
+            }
+        }
+        
+        // 移动玩家
+        function movePlayer(direction) {
+            if (playerX < 0 || playerY < 0) return;
+            
+            let newX = playerX;
+            let newY = playerY;
+            
+            // 计算新位置
+            if (direction === 'w') {
+                newY--;
+            } else if (direction === 's') {
+                newY++;
+            } else if (direction === 'a') {
+                newX--;
+            } else if (direction === 'd') {
+                newX++;
+            }
+            
+            // 检查新位置是否可通行
+            if (newX >= 0 && newX < currentWorld.width && 
+                newY >= 0 && newY < currentWorld.height) {
+                const tile = currentWorld.map[newY][newX];
+                if (tile === 2 || tile === 3) {  // 房间或走廊
+                    playerX = newX;
+                    playerY = newY;
+                    inputSequence += direction;
+                    renderWorld(currentWorld);
+                    
+                    // 更新HUD
+                    document.getElementById('playerPos').textContent = `(${playerX}, ${playerY})`;
+                }
+            }
+        }
+
+        // 显示状态消息
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+            statusDiv.style.display = 'block';
+            
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // 生成世界
+        async function generateWorld() {
+            const seed = document.getElementById('seedInput').value;
+            const width = parseInt(document.getElementById('widthInput').value) || 80;
+            const height = parseInt(document.getElementById('heightInput').value) || 50;
+            
+            showStatus('正在生成世界...', 'info');
+            
+            try {
+                let url = `${API_BASE}/api/generate?width=${width}&height=${height}`;
+                if (seed) {
+                    url += `&seed=${seed}`;
+                }
+                
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('生成世界失败');
+                }
+                
+                const world = await response.json();
+                console.log('收到世界数据:', world);
+                currentWorld = world;
+                
+                // 确保map数据是数组
+                if (typeof world.map === 'string') {
+                    try {
+                        world.map = JSON.parse(world.map);
+                    } catch (e) {
+                        console.error('解析map数据失败:', e);
+                    }
+                }
+                
+                renderWorld(world);
+                updateInfo(world);
+                // 重置游戏状态
+                isGameStarted = false;
+                playerX = -1;
+                playerY = -1;
+                inputSequence = '';
+                document.getElementById('currentSeed').textContent = world.seed;
+                document.getElementById('playerPos').textContent = '-';
+                showStatus(`世界生成成功！种子: ${world.seed}。按S键开始游戏`, 'success');
+            } catch (error) {
+                showStatus('生成世界失败: ' + error.message, 'error');
+                console.error('Error:', error);
+            }
+        }
+
+        // 加载世界
+        async function loadWorld() {
+            showStatus('正在加载世界...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/world`);
+                if (!response.ok) {
+                    throw new Error('加载世界失败');
+                }
+                
+                const world = await response.json();
+                console.log('加载世界数据:', world);
+                currentWorld = world;
+                
+                // 确保map数据是数组
+                if (typeof world.map === 'string') {
+                    try {
+                        world.map = JSON.parse(world.map);
+                    } catch (e) {
+                        console.error('解析map数据失败:', e);
+                    }
+                }
+                
+                renderWorld(world);
+                updateInfo(world);
+                isGameStarted = false;
+                playerX = -1;
+                playerY = -1;
+                inputSequence = '';
+                document.getElementById('currentSeed').textContent = world.seed;
+                document.getElementById('playerPos').textContent = '-';
+                showStatus('世界加载成功。按S键开始游戏', 'success');
+            } catch (error) {
+                showStatus('没有已生成的世界，请先生成世界', 'info');
+                console.error('Error:', error);
+            }
+        }
+
+        // 渲染世界
+        function renderWorld(world) {
+            console.log('渲染世界，数据:', world);
+            
+            if (!world) {
+                console.error('世界数据为空');
+                return;
+            }
+            
+            if (!world.map) {
+                console.error('地图数据不存在，世界对象:', world);
+                showStatus('地图数据缺失', 'error');
+                return;
+            }
+            
+            if (!canvas || !ctx) {
+                console.error('Canvas未初始化');
+                return;
+            }
+            
+            const width = world.width;
+            const height = world.height;
+            
+            console.log(`世界尺寸: ${width} x ${height}, 地图数据长度: ${world.map.length}`);
+            
+            // 设置画布大小
+            canvas.width = width * TILE_SIZE;
+            canvas.height = height * TILE_SIZE;
+            
+            // 绘制背景棋盘格纹理（深灰色和浅粉色交替）
+            const bgColor1 = '#2a2a2a';  // 深灰色
+            const bgColor2 = '#ffb3d1';  // 浅粉色
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const isEven = (x + y) % 2 === 0;
+                    ctx.fillStyle = isEven ? bgColor1 : bgColor2;
+                    ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+            }
+            
+            // 绘制地图（像素风格，模仿教程图）
+            let drawnTiles = 0;
+            let wallCount = 0, roomCount = 0, corridorCount = 0;
+            
+            // 设置字体用于绘制'#'符号（使用等宽字体，确保符号清晰）
+            ctx.font = `bold ${TILE_SIZE}px 'Courier New', monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            for (let y = 0; y < height; y++) {
+                if (!world.map[y]) {
+                    console.warn(`第${y}行数据不存在`);
+                    continue;
+                }
+                for (let x = 0; x < width; x++) {
+                    const tile = world.map[y][x];
+                    
+                    // 只绘制有内容的瓦片，未使用的空间显示背景纹理
+                    if (tile === 1) {
+                        // 墙壁：深灰色背景 + 粉红色'#'符号
+                        ctx.fillStyle = '#404040';  // 深灰色墙壁背景
+                        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        
+                        // 绘制'#'符号（粉红色，更明显）
+                        ctx.fillStyle = '#FF6B9D';  // 粉红色'#'
+                        const centerX = x * TILE_SIZE + TILE_SIZE / 2;
+                        const centerY = y * TILE_SIZE + TILE_SIZE / 2;
+                        ctx.fillText('#', centerX, centerY);
+                        
+                        wallCount++;
+                    } else if (tile === 2 || tile === 3) {
+                        // 地板：黑色背景 + 很小的浅绿色点
+                        ctx.fillStyle = '#000000';  // 黑色地板
+                        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        
+                        // 绘制很小的点（浅绿色，非常小）
+                        ctx.fillStyle = '#90EE90';  // 浅绿色点
+                        const dotX = x * TILE_SIZE + TILE_SIZE / 2;
+                        const dotY = y * TILE_SIZE + TILE_SIZE / 2;
+                        // 绘制一个非常小的圆点（半径约为瓦片的1/6）
+                        ctx.beginPath();
+                        ctx.arc(dotX, dotY, Math.max(0.5, TILE_SIZE / 6), 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        if (tile === 2) roomCount++;
+                        else corridorCount++;
+                    }
+                    // tile === 0 或未定义：不绘制，显示背景纹理
+                    
+                    drawnTiles++;
+                }
+            }
+            
+            console.log(`已绘制 ${drawnTiles} 个瓦片 (墙壁:${wallCount}, 房间:${roomCount}, 走廊:${corridorCount})`);
+            
+            // 绘制玩家（如果游戏已开始）
+            if (isGameStarted && playerX >= 0 && playerY >= 0) {
+                ctx.fillStyle = '#FFFF00';  // 黄色
+                ctx.font = `bold ${TILE_SIZE}px 'Courier New', monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const playerCenterX = playerX * TILE_SIZE + TILE_SIZE / 2;
+                const playerCenterY = playerY * TILE_SIZE + TILE_SIZE / 2;
+                ctx.fillText('@', playerCenterX, playerCenterY);
+            }
+        }
+
+        // 更新信息面板
+        function updateInfo(world) {
+            if (!world) return;
+            
+            // 世界信息
+            document.getElementById('worldInfo').innerHTML = `
+                <strong>种子:</strong> ${world.seed}<br>
+                <strong>尺寸:</strong> ${world.width} × ${world.height}<br>
+                <strong>连通性:</strong> ${world.roomCount > 0 ? '✓ 连通' : '✗ 未连通'}
+            `;
+            
+            // 房间统计
+            document.getElementById('roomStats').innerHTML = `
+                <strong>房间数量:</strong> ${world.roomCount}<br>
+                <strong>平均大小:</strong> ${world.rooms && world.rooms.length > 0 
+                    ? Math.round(world.rooms.reduce((sum, r) => sum + r.width * r.height, 0) / world.rooms.length)
+                    : 0} 瓦片
+            `;
+            
+            // 走廊统计
+            document.getElementById('corridorStats').innerHTML = `
+                <strong>走廊数量:</strong> ${world.corridorCount}<br>
+                <strong>转弯走廊:</strong> ${world.corridors 
+                    ? world.corridors.filter(c => c.isTurning).length 
+                    : 0}
+            `;
+        }
+
+        // 保存游戏
+        async function saveGame() {
+            if (!currentWorld || !isGameStarted) {
+                showStatus('请先开始游戏', 'error');
+                return;
+            }
+            
+            const saveData = {
+                seed: currentWorld.seed,
+                width: currentWorld.width,
+                height: currentWorld.height,
+                playerX: playerX,
+                playerY: playerY,
+                inputSequence: inputSequence
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/save`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(saveData)
+                });
+                
+                if (response.ok) {
+                    showStatus('游戏已保存', 'success');
+                } else {
+                    throw new Error('保存失败');
+                }
+            } catch (error) {
+                showStatus('保存游戏失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 加载游戏
+        async function loadGame() {
+            try {
+                const response = await fetch(`${API_BASE}/api/load`);
+                if (!response.ok) {
+                    throw new Error('加载失败');
+                }
+                
+                const saveData = await response.json();
+                
+                // 重新生成世界（使用相同种子）
+                await generateWorldFromSeed(saveData.seed, saveData.width, saveData.height);
+                
+                // 恢复玩家位置和输入序列
+                playerX = saveData.playerX;
+                playerY = saveData.playerY;
+                inputSequence = saveData.inputSequence;
+                isGameStarted = true;
+                
+                // 重新执行输入序列（确保确定性）
+                for (let i = 0; i < inputSequence.length; i++) {
+                    movePlayer(inputSequence[i]);
+                }
+                
+                showStatus('游戏已加载', 'success');
+            } catch (error) {
+                showStatus('加载游戏失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 从种子生成世界（内部函数）
+        async function generateWorldFromSeed(seed, width, height) {
+            let url = `${API_BASE}/api/generate?width=${width}&height=${height}&seed=${seed}`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('生成世界失败');
+            }
+            const world = await response.json();
+            currentWorld = world;
+            if (typeof world.map === 'string') {
+                try {
+                    world.map = JSON.parse(world.map);
+                } catch (e) {
+                    console.error('解析map数据失败:', e);
+                }
+            }
+            renderWorld(world);
+            updateInfo(world);
+            document.getElementById('currentSeed').textContent = world.seed;
+        }
+        
+        // 处理键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                e.preventDefault();
+                generateWorld();
+            } else if (e.key === 'r' && e.ctrlKey) {
+                e.preventDefault();
+                loadWorld();
+            }
+        });
+    </script>
+</body>
+</html>
+

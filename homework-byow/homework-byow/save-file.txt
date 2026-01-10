@@ -1,0 +1,1 @@
+{"seed":1768066090,"width":80,"height":50,"playerX":30,"playerY":19,"inputSequence":"sddddasssdssssssssddssss"}
